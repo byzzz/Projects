@@ -1,158 +1,168 @@
-package graphs;
+package friends;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.Scanner;
+import java.util.ArrayList;
 
-class Neighbor {
-    public int vertexNum;
-    public Neighbor next;
-    public Neighbor(int vnum, Neighbor nbr) {
-            this.vertexNum = vnum;
-            next = nbr;
-    }
-}
+import structures.Queue;
+import structures.Stack;
 
-class Vertex {
-    String name;
-    Neighbor adjList;
-    Vertex(String name, Neighbor neighbors) {
-            this.name = name;
-            this.adjList = neighbors;
-    }
-}
+public class Friends {
 
-public class Graph {
-	Vertex[] adjLists;
-	
-	boolean undirected=true;
-	
-	public Graph(String file) throws FileNotFoundException {
+	/**
+	 * Finds the shortest chain of people from p1 to p2.
+	 * Chain is returned as a sequence of names starting with p1,
+	 * and ending with p2. Each pair (n1,n2) of consecutive names in
+	 * the returned chain is an edge in the graph.
+	 * 
+	 * @param g Graph for which shortest chain is to be found.
+	 * @param p1 Person with whom the chain originates
+	 * @param p2 Person at whom the chain terminates
+	 * @return The shortest chain from p1 to p2. Null if there is no
+	 *         path from p1 to p2
+	 */
+	public static ArrayList<String> shortestChain(Graph g, String p1, String p2) {
 		
-		Scanner sc = new Scanner(new File(file));
-		
-		String graphType = sc.next();
-		if (graphType.equals("directed")) {
-			undirected=false;
+		/** COMPLETE THIS METHOD **/
+		ArrayList<String> shortPath = new ArrayList<>();
+		boolean[] visited = new boolean[g.members.length];
+		Queue<Person> queue = new Queue<>();
+		Stack<String> path = new Stack<>();
+		int[] prev = new int[g.members.length];
+		int[] dist = new int[g.members.length];
+		for(int i=0; i<prev.length;i++) {
+			prev[i]=-1;
+			visited[i]=false;
+			dist[i]=Integer.MAX_VALUE;
 		}
-		
-		adjLists = new Vertex[sc.nextInt()];
-
-		// read vertices
-		for (int v=0; v < adjLists.length; v++) {
-			adjLists[v] = new Vertex(sc.next(), null);
-		}
-
-		// read edges
-		while (sc.hasNext()) {
-			
-			// read vertex names and translate to vertex numbers
-			int v1 = indexForName(sc.next());
-			int v2 = indexForName(sc.next());
-			
-			// add v2 to front of v1's adjacency list and
-			adjLists[v1].adjList = new Neighbor(v2, adjLists[v1].adjList);
-			if (undirected) {
-				// add v1 to front of v2's adjacency list
-				adjLists[v2].adjList = new Neighbor(v1, adjLists[v2].adjList);
+		visited[g.map.get(p1)]=true;
+		queue.enqueue(g.members[g.map.get(p1)]);
+		dist[g.map.get(p1)]=0;
+		while(!queue.isEmpty()) {
+			Person currPerson = queue.dequeue();
+			for(Friend f=currPerson.first;f!=null;f=f.next) {
+				int vnum = f.fnum;
+				if(!visited[vnum]) {
+					visited[vnum]=true;
+					prev[vnum]= g.map.get(currPerson.name);
+					dist[vnum]= dist[g.map.get(currPerson.name)]+1;
+					queue.enqueue(g.members[vnum]);
+				}
 			}
 		}
-		
-		sc.close();
+		Person currNode = g.members[g.map.get(p2)];
+		while(prev[g.map.get(currNode.name)]!=-1) {
+			path.push(currNode.name);
+			currNode = g.members[prev[g.map.get(currNode.name)]];
+		}
+		if(!path.isEmpty()) {
+			shortPath.add(p1);
+			while(!path.isEmpty()) {
+				shortPath.add(path.pop());
+			}
+		}
+		return shortPath;
 	}
 	
-	int indexForName(String name) {
-		for (int v=0; v < adjLists.length; v++) {
-			if (adjLists[v].name.equals(name)) {
-				return v;
-			}
-		}
-		return -1;
-	}	
+	Node(float coeff, int degree, Node next)
 	
-	public void print() {
-		System.out.println();
-		for (int v=0; v < adjLists.length; v++) {
-			System.out.print(adjLists[v].name);
-			for (Neighbor nbr=adjLists[v].adjList; nbr != null;nbr=nbr.next) {
-				System.out.print(" --> " + adjLists[nbr.vertexNum].name);
+	/**
+	 * Finds all cliques of students in a given school.
+	 * 
+	 * Returns an array list of array lists - each constituent array list contains
+	 * the names of all students in a clique.
+	 * 
+	 * @param g Graph for which cliques are to be found.
+	 * @param school Name of school
+	 * @return Array list of clique array lists. Null if there is no student in the
+	 *         given school
+	 */
+	public static ArrayList<ArrayList<String>> cliques(Graph g, String school) {
+		
+		/** COMPLETE THIS METHOD **/
+		
+		ArrayList<ArrayList<String>> result = new ArrayList<>();
+		boolean[] visited = new boolean[g.members.length];
+		Queue<Person> bfsq = new Queue<>();
+		for(int v=0; v<visited.length; v++) {
+			if(!visited[v] && g.members[v].school!=null && g.members[v].school.equals(school)) {
+				result.add(bfsAdd(g,g.members[v], visited,v, bfsq,school));
 			}
-			System.out.println("\n");
 		}
+		return result;
+	}
+	private static ArrayList<String> bfsAdd(Graph g,Person n, boolean[] visit,int v, Queue<Person> queue,String school) {
+		ArrayList<String> clique = new ArrayList<>();
+		visit[v]=true;
+		queue.enqueue(n);
+		clique.add(n.name);
+		while(!queue.isEmpty()) {
+			Person currPerson = queue.dequeue();
+			for(Friend f=currPerson.first;f!=null;f=f.next) {
+				int vnum = f.fnum;
+				if(!visit[vnum]) {
+					visit[vnum]=true;
+					if(g.members[vnum].school!=null && g.members[vnum].school.equals(school)) {
+					clique.add(g.members[vnum].name);
+					queue.enqueue(g.members[vnum]);
+					}
+				}
+			}
+		}
+		return clique;
 	}
 	
-	public void dfs() {
-		 boolean[] visited = new boolean[adjLists.length];
-		 for (int v=0; v < visited.length; v++) {
-			 visited[v] = false;
-		 }
-		 for (int v=0; v < visited.length; v++) {
-			 if (!visited[v]) {
-				 System.out.println("\nSTARTING AT " + adjLists[v].name + "\n");
-				 dfs(v, visited);
-			 }
-		 }
-	 }
+	/**
+	 * Finds and returns all connectors in the graph.
+	 * 
+	 * @param g Graph for which connectors needs to be found.
+	 * @return Names of all connectors. Null if there are no connectors.
+	 */
+	public static ArrayList<String> connectors(Graph g) {
+		
+		/** COMPLETE THIS METHOD **/
+		ArrayList<String> connectors = new ArrayList<>();
+		int[] dfsnum = new int[g.members.length];
+		int[] back = new int[g.members.length];
+		boolean[] visited = new boolean[g.members.length];
+		int dfsCount=0, backCount=0;
+		for (int v=0; v < visited.length; v++) {
+			visited[v] = false;
+		}
+		for (int v=0; v < visited.length; v++) {
+			if (!visited[v]) {
+				Person start = g.members[v];
+				dfsnum[v]=1;
+				back[v]=dfsnum[v];
+				dfs(start,v, visited, g,dfsnum, back, dfsCount, backCount,connectors);
+			}
+		}
+		return connectors;
+	}
 	
-	// recursive dfs
-	private void dfs(int v, boolean[] visited) {
+	private static void dfs(Person start, int v, boolean[] visited, Graph g, int[] dfsnum, int[] back,int dfsCount, int backCount,ArrayList<String> connectors) {
 		visited[v] = true;
-		System.out.println("\tvisiting " + adjLists[v].name);
-		for (Neighbor e=adjLists[v].adjList; e != null; e=e.next) {
-			if (!visited[e.vertexNum]) {
-				System.out.println("\t" + adjLists[v].name + "--" + adjLists[e.vertexNum].name);
-				dfs(e.vertexNum, visited);
+		dfsnum[v]=dfsCount;
+		dfsCount++;
+		back[v]=backCount;
+		backCount++;
+		for (Friend f=g.members[v].first;f!=null;f=f.next) {
+			if (!visited[f.fnum]) {
+				dfs(start,f.fnum, visited,g, dfsnum, back,dfsCount,backCount, connectors);
+				if (dfsnum[v]>back[f.fnum]) {
+					back[v]=Math.min(back[v], back[f.fnum]);
+				} else if (dfsnum[v]<=back[f.fnum]){
+					if(g.members[v].name!=start.name && !connectors.contains(g.members[v].name) && g.members[v].first.next!=null) {
+						connectors.add(g.members[v].name);
+					} else if(g.members[v].name==start.name && g.members[v].first.next==null) {
+						//nothing
+					} else if(!connectors.contains(g.members[v].name)){
+						connectors.add(g.members[v].name);
+					}
+				}
+			} else {
+				back[v]=Math.min(back[v],dfsnum[f.fnum]);
 			}
 		}
 	}
-	
-	public String[] topologicalSort() {
-		boolean[] visited = new boolean[adjLists.length];
-		String[] topnums = new String[adjLists.length];
-		
-		int n = adjLists.length-1;
-		 for (int v=0; v < visited.length; v++) {
-			 if (!visited[v]) {
-				 n = topsort(v, visited, topnums, n);
-			 }
-		 }
-		 return topnums;
-	}
-	
-	private int topsort(int v, boolean[] visited, String[] topnums, int n) {
-		visited[v] = true;
-		for (Neighbor e=adjLists[v].adjList; e != null; e=e.next) {
-			if (!visited[e.vertexNum]) {
-				n = topsort(e.vertexNum, visited, topnums, n);
-			}
-		}
-		// finished looking at all neighbors
-		topnums[n] = adjLists[v].name;
-		return n-1;
-	}
-	
-	public static void main(String[] args) 
-			throws IOException {
-		// TODO Auto-generated method stub
-		Scanner sc = new Scanner(System.in);
-		System.out.print("Enter graph input file name: ");
-		String file = sc.nextLine();
-		Graph graph = new Graph(file);
-		sc.close();
-		graph.print();
-
-		System.out.println("Doing DFS...");
-		graph.dfs();
-		
-		if (file.equals("website2.txt")) {
-			System.out.println("\n\nDoing DFS topsort...");
-			String[] topseq = graph.topologicalSort();
-			for (int i=0; i < topseq.length; i++) {
-				System.out.println(topseq[i]);
-			}		 
-		}
-		
-	}
-
 }
+
+
